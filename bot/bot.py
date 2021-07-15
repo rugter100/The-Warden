@@ -427,9 +427,12 @@ async def listmembers(ctx):
     for row in memberdata:
         cursor.execute('SELECT guildname,guildleaderid FROM guilds WHERE serverid=%s AND guildid=%s', (serverid, row[5],))
         guilddata = cursor.fetchone()
-        guildname = guilddata[0]
-        if guilddata[1] == row[0]:
-            guildname = f'Leader of the {guilddata[0]}'
+        if guilddata is not None:
+            guildname = guilddata[0]
+            if guilddata[1] == row[0]:
+                guildname = f'Leader of the {guilddata[0]}'
+        else:
+            guildname = 'Lone wolf'
         embed.add_field(name=f'{row[1]} {row[2]}', value=f'Age: {row[3]} Race: {row[4]}\nGuild: {guildname} Guild\nJob: {row[6]}')
         embedcount += 1
         if embedcount == 25:
