@@ -10,26 +10,34 @@ from discord.utils import get
 from mcuuid import MCUUID
 from mcuuid.tools import is_valid_minecraft_username, is_valid_mojang_uuid
 
+
+version = '0.1.0.Hotfix1'
+configver = '1.0.0'
 intents = discord.Intents(guilds=True, messages=True, dm_messages=True, members=True, voice_states=True)
 bot = commands.Bot(command_prefix='>', intents=intents)
 
 with open(r'config.yml') as config:
     cfg = yaml.load(config, Loader=yaml.FullLoader)
+    if version != cfg['Version']:
+        print('[WARN] Config and bot version mismatch! Please check and update file where needed! Bot version: {} Config version: {}'.format(version, cfg['Version']))
+    if configver != cfg['ConfigVer']:
+        print('[WARN] Config file version mismatch! This can crash the bot! Please check file versions and update where needed! Dont update the config file parameter without comparing config files with github!')
+        print('[WARN] Current config version: {} Needed config version: {}'.format(configver, cfg['ConfigVer']))
+        sys.exit()
     db = mysql.connector.connect(
         host=cfg['Database']['Host'],
         user=cfg['Database']['Username'],
         password=cfg['Database']['Password'],
-        database=cfg['Database']['DatabaseName']
-    )
+        database=cfg['Database']['DatabaseName'])
     cursor = db.cursor(buffered=True)
 
 if cfg['Bottoken'] == '':
-    print('[ERROR] Bot Token not configured Correctly!')
+    print('[ERROR] No bot token configured! Please update the config file!')
     sys.exit()
 else:
     print('[INFO] Bot token Found! Using Configured token')
 
-if cfg['RunSetup'] == 1:  # Bot initialization
+if cfg['RunSetup']:  # Bot initialization
     print('[WARN] Bot not set up. Running initialization')
     print('[WARN] This will delete ALL tables used by the bot in the database!')
     confirm = input('[INFO] Please type YES if you want to continue and NO if you only want to generate new databases: ')
@@ -47,7 +55,6 @@ if cfg['RunSetup'] == 1:  # Bot initialization
         os.mkdir('BotData/Guilds')
     cursor.execute('CREATE TABLE IF NOT EXISTS {}serversettings (serverid int AUTO_INCREMENT NOT NULL PRIMARY KEY,initialized boolean,dcserverid bigint,mcserverip varchar(36))'.format(cfg['Database']['Prefix']))
     cursor.execute('CREATE TABLE IF NOT EXISTS {}guilds (serverid int,guildid int AUTO_INCREMENT NOT NULL PRIMARY KEY,guildcolor varchar(6),guildname varchar(36),guildleaderid int,bankname varchar(36))'.format(cfg['Database']['Prefix']))
-    # cursor.execute('CREATE TABLE IF NOT EXISTS {}currencies (serverid int,guildid int,currencyid int AUTO_INCREMENT NOT NULL PRIMARY KEY,currencyname varchar(16),bankerid int)'.format(cfg['Database']['Prefix']))
     cursor.execute('CREATE TABLE IF NOT EXISTS {}userinfo (serverid int,userid int AUTO_INCREMENT NOT NULL PRIMARY KEY,dcuserid bigint,mcuserid varchar(33),firstname varchar(36),lastname varchar(36),age int(4),race varchar(36),guildid int,job varchar(36),nickname varchar(36))'.format(cfg['Database']['Prefix']))
     db.commit()
 
@@ -184,7 +191,7 @@ async def profile(ctx, user: discord.User=None):
     embed.add_field(name='Race', value=race)
     embed.add_field(name='Guild', value=guildvalue, inline=False)
     embed.add_field(name='Job', value=job, inline=False)
-    embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+    embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
     await ctx.send(embed=embed)
 
 
@@ -198,36 +205,36 @@ async def profile_error(ctx):
 async def makeprofile(ctx, arg1=None, arg2=None, arg3=None, arg4=None, arg5=None, arg6=None, arg7=None, arg8=None):
     error = False
     embederror = discord.Embed(title='We found errors in your command syntax!', color=0xF66946)
-    if arg1.isdigit():
-        if ctx.author.id == int(cfg['Botownerid']):
-            dcuser = arg1
-            mcusername = arg2
-            firstname = arg3
-            lastname = arg4
-            agestr = arg5
-            age = 0
-            if agestr is not None:
-                if agestr.isdigit():
-                    age = int(arg5)
-            race = arg6
-            job = arg7
-            nickname = arg8
-        else:
-            error = True
-            embederror.add_field(name='Insufficient Privileges!', value='You do not have the permission to make profiles for other users!')
-    else:
-        dcuser = ctx.author
-        mcusername = arg1
-        firstname = arg2
-        lastname = arg3
-        agestr = arg4
-        age = 0
-        if agestr is not None:
-            if agestr.isdigit():
-                age = int(arg4)
-        race = arg5
-        job = arg6
-        nickname = arg7
+    dcuser = ctx.author
+    mcusername = arg1
+    firstname = arg2
+    lastname = arg3
+    agestr = arg4
+    age = 0
+    if agestr is not None:
+        if agestr.isdigit():
+            age = int(arg4)
+    race = arg5
+    job = arg6
+    nickname = arg7
+    if arg1 is not None:
+        if arg1.isdigit():
+            if ctx.author.id == int(cfg['Botownerid']):
+                dcuser = arg1
+                mcusername = arg2
+                firstname = arg3
+                lastname = arg4
+                agestr = arg5
+                age = 0
+                if agestr is not None:
+                    if agestr.isdigit():
+                        age = int(arg5)
+                race = arg6
+                job = arg7
+                nickname = arg8
+            else:
+                error = True
+                embederror.add_field(name='Insufficient Privileges!', value='You do not have the permission to make profiles for other users!')
     if None in (mcusername, firstname, lastname, age, race):
         await ctx.send('Missing or wrong parameters!\nPlease use `makeprofile <mcusername> <firstname> <lastname> <age> <race> {job} {nickname}`\n**Remember! If a name has spaces put it in between ""**')
     else:
@@ -300,7 +307,7 @@ async def makeprofile(ctx, arg1=None, arg2=None, arg3=None, arg4=None, arg5=None
                 embed.add_field(name='Job', value=job)
             if nickname is not None:
                 embed.add_field(name='Nickname', value=nickname)
-            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
             await ctx.send(embed=embed)
 
 
@@ -404,7 +411,7 @@ async def editprofile(ctx, arg1=None, arg2=None, dcuser: discord.User=None):
                 embed.add_field(name='Race', value=race)
                 embed.add_field(name='Guild', value=guildvalue, inline=False)
                 embed.add_field(name='Job', value=job, inline=False)
-                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
                 await ctx.send(embed=embed)
             else:
                 await ctx.send('Command cancelled! Please rerun the command to give it another try!')
@@ -423,7 +430,6 @@ async def listmembers(ctx):
     embedcount = 0
     pagecount = 0
     embed = discord.Embed(title='RP Member list', description=f'The RP has {cursor.rowcount} Characters')
-    print('yes')
     for row in memberdata:
         cursor.execute('SELECT guildname,guildleaderid FROM guilds WHERE serverid=%s AND guildid=%s', (serverid, row[5],))
         guilddata = cursor.fetchone()
@@ -437,12 +443,12 @@ async def listmembers(ctx):
         embedcount += 1
         if embedcount == 25:
             pagecount += 1
-            embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, embedcount, cfg['Version']))
+            embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, embedcount, version))
             await ctx.send(embed=embed)
     if pagecount == 0:
-        embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+        embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
     else:
-        embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, embedcount, cfg['Version']))
+        embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, embedcount, version))
     await ctx.send(embed=embed)
 
 # ======================
@@ -455,10 +461,12 @@ async def listmembers(ctx):
 async def makeguild(ctx, arg1=None, arg2=None, arg3=None, user: discord.User=None):
     runcmd = False
     guildname = arg1
-    if arg2.startswith('#'):
-        guildcolor = arg2.replace('#', '')
-    else:
-        guildcolor = arg2
+    guildcolor = arg2
+    if arg2 is not None:
+        if arg2.startswith('#'):
+            guildcolor = arg2.replace('#', '')
+        else:
+            guildcolor = arg2
     if user is None:
         guildleader = ctx.message.author
         runcmd = True
@@ -478,9 +486,9 @@ async def makeguild(ctx, arg1=None, arg2=None, arg3=None, user: discord.User=Non
             cursor.execute('SELECT serverid FROM serversettings WHERE dcserverid=%s', (ctx.guild.id,))
             serverid = cursor.fetchone()[0]
             cursor.execute('SELECT * FROM guilds WHERE serverid=%s AND guildname=%s', (serverid, guildname,))
-            entyexists = cursor.rowcount
-            if entyexists == 1:
-                embederror.add_field(name='The guild name is already in use!', value=f'The guild name `{guildname}` is already in useby another guild!')
+            entryexists = cursor.rowcount
+            if entryexists == 1:
+                embederror.add_field(name='The guild name is already in use!', value=f'The guild name `{guildname}` is already in use by another guild!')
                 error = True
             if len(guildname) > 36:
                 embederror.add_field(name='Your guild name is too long!', value=f'`{guildname}` is too long of a name. Please use max 36 characters for your guild name.')
@@ -488,14 +496,17 @@ async def makeguild(ctx, arg1=None, arg2=None, arg3=None, user: discord.User=Non
             if len(guildcolor) != 6:
                 embederror.add_field(name='Your colour hex is too long or short!', value=f'A colour hex should be exacty 6 characters long. `{guildcolor}` is either too long or too short')
                 error = True
-            cursor.execute('SELECT userid FROM userinfo WHERE serverid=%s AND dcuserid=%s', (serverid, user.id,))
+            cursor.execute('SELECT userid FROM userinfo WHERE serverid=%s AND dcuserid=%s', (serverid, guildleader.id,))
             guildleaderidentry = cursor.rowcount
-            if guildleaderidentry == 0:
+            if guildleaderidentry is None:
                 embederror.add_field(name='User was not found!', value=f'We could not find user {user.mention}. This probably means they dont have a character profile yet!')
                 error = True
             else:
-                guildleaderidraw = cursor.fetchone()
-                guildleaderid = guildleaderidraw[0]
+                guildleaderid = cursor.fetchone()[0]
+                cursor.execute('SELECT guildname FROM guilds WHERE serverid=%s AND guildleaderid=%s', (serverid, guildleaderid,))
+                if cursor.fetchone() is not None:
+                    embederror.add_field(name='You already have a guild!', value=f"You are already the leader of the {cursor.fetchone()[0]} Guild! Don't be so greedy!")
+                    error = True
             if bankname is not None:
                 if len(bankname) > 36:
                     embederror.add_field(name='Bank name too long', value=f'The bank name `{bankname}` is too long! Please use max 36 characters for the name of your bank.')
@@ -504,11 +515,10 @@ async def makeguild(ctx, arg1=None, arg2=None, arg3=None, user: discord.User=Non
                 await ctx.send(embed=embederror)
             else:
                 # Database Part
-                cursor.execute('INSERT INTO guilds (serverid,guildname,guildcolor,guildleaderid,bankname) VALUES (%s,%s,%s,%s,%s)',
-                               (serverid, guildname, guildcolor, guildleaderid, bankname,))
+                cursor.execute('INSERT INTO guilds (serverid,guildname,guildcolor,guildleaderid,bankname) VALUES (%s,%s,%s,%s,%s)', (serverid, guildname, guildcolor, guildleaderid, bankname,))
                 cursor.execute('SELECT guildid FROM guilds WHERE serverid=%s AND guildcolor=%s AND guildname=%s AND guildleaderid=%s', (serverid, guildcolor, guildname, guildleaderid,))
                 guildid = cursor.fetchone()[0]
-                cursor.execute('UPDATE userinfo SET guildid=%s WHERE serverid=%s AND userid=%s AND dcuserid=%s', (guildid, serverid, guildleaderid, user.id,))
+                cursor.execute('UPDATE userinfo SET guildid=%s WHERE serverid=%s AND userid=%s AND dcuserid=%s', (guildid, serverid, guildleaderid, guildleader.id,))
                 db.commit()
                 # File Part
                 os.mkdir(f'BotData/Guilds/{serverid}/{guildid}')
@@ -522,7 +532,7 @@ async def makeguild(ctx, arg1=None, arg2=None, arg3=None, user: discord.User=Non
                 embed.add_field(name='Guild leader:', value=guildleader.mention)
                 if bankname is not None:
                     embed.add_field(name='Bank name:', value=bankname)
-                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
                 await ctx.send(embed=embed)
 
 
@@ -538,11 +548,8 @@ async def editguild(ctx, arg1=None, arg2=None, arg3=None):
         cursor.execute('SELECT userid,firstname,lastname FROM userinfo WHERE serverid=%s AND dcuserid=%s', (serverid, ctx.message.author.id,))
         guildleaderdata = cursor.fetchone()
         if guildleaderdata is not None:
-            print('YES2')
-            print(colorcmd + namecmd + banknamecmd)
             guilddata = None
             if arg1 in (colorcmd + namecmd + banknamecmd):
-                print('YES1')
                 cursor.execute('SELECT guildcolor,guildname,bankname,guildid FROM guilds WHERE serverid=%s AND guildid=%s', (serverid, guildleaderdata[0],))
                 guilddata = cursor.fetchone()
             elif ctx.author.id == int(cfg['Botownerid']):
@@ -606,7 +613,7 @@ async def editguild(ctx, arg1=None, arg2=None, arg3=None):
                     if guilddata[2] is not None:
                         embed.add_field(name='Bank information:', value=f'{guilddata[2]}')
                     embed.set_footer(
-                        text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+                        text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
                     await ctx.send(embed=embed)
                 else:
                     await ctx.send('Command cancelled!')
@@ -695,7 +702,7 @@ async def addmember(ctx, dcuser: discord.Member=None, arg1=None):
                 # Message back to the user
                 embed = discord.Embed(title='Success!', description=f'the {guilddata[2]} Guild now has {guild_member_count} Members!', color=int(guilddata[1], 16))
                 embed.add_field(name=f'{userdata[1]} {userdata[2]} Joined the guild!', value='~Welcome~')
-                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
                 await ctx.send(embed=embed)
         else:
             await ctx.send('This user doesnt have a profile!')
@@ -742,7 +749,7 @@ async def removemember(ctx, dcuser: discord.Member=None, arg1=None):
                 # Message back to the user
                 embed = discord.Embed(title='Success!', description=f'the {guilddata[2]} Guild now has {guild_member_count} Members!', color=int(guilddata[1], 16))
                 embed.add_field(name=f'{userdata[1]} {userdata[2]} Joined the guild!', value='~Welcome~')
-                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+                embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
                 await ctx.send(embed=embed)
             else:
                 await ctx.send('This user is not a part of your guild!')
@@ -786,7 +793,7 @@ async def guildinfo(ctx, arg1=None):
             embed.add_field(name='Guild Leader', value=f'{guild_ldr_firstname} {guild_ldr_lastname}\nDiscord: {guild_ldr_dcuser}\nMinecraft: {guild_ldr_mcuser.name}')
             if guild_bankname is not None:
                 embed.add_field(name='Bank information:', value=f'{guild_bankname}')
-            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
             await ctx.send(embed=embed)
         else:
             await ctx.send('Guild was not found! The name is case sensitive!')
@@ -820,16 +827,16 @@ async def listguilds(ctx):
             if row[0] == guildleaderid:
                 leaderfirstname = row[1]
                 leaderlastname = row[2]
-        embed.add_field(name=f'{guildname} guild', value=f'{guildmembers} Members\nGuild Leader: {leaderfirstname} {leaderlastname}\nColour code: #{guildcolor}{bankname}', inline=False)
+                embed.add_field(name=f'{guildname} guild', value=f'{guildmembers} Members\nGuild Leader: {leaderfirstname} {leaderlastname}\nColour code: #{guildcolor}{bankname}', inline=False)
         guildembeds += 1
         if guildembeds == 25:
             pagecount += 1
-            embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, pagecount, cfg['Version']))
+            embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, pagecount, version))
             await ctx.send(embed=embed)
     if pagecount == 0:
-        embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+        embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
     else:
-        embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, pagecount, cfg['Version']))
+        embed.set_footer(text='Requested by {} | Page {}/? | RP Bot Ver {}'.format(ctx.author.display_name, pagecount, version))
     await ctx.send(embed=embed)
 
 
@@ -851,22 +858,9 @@ async def guildmembers(ctx, arg1=None):
                 else:
                     memberlist += f' --- {row[1]} {row[2]}\n'
             embed.add_field(name='Memberlist:', value=memberlist)
-            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, cfg['Version']))
+            embed.set_footer(text='Requested by {} | RP Bot Ver {}'.format(ctx.author.display_name, version))
             await ctx.send(embed=embed)
     else:
         await ctx.send('Please enter a guild name!\n`guildmembers <guildname>`')
-
-# =============
-# Economy stuff
-# =============
-
-
-#@bot.command()
-#async def makeeconomy(ctx, arg1=None, arg2=None, dcuser: discord.User=None):
-#    guildname = arg1
-#    currencyname = arg2
-#    bankermention = dcuser
-#    if None not in (arg1, arg2, dcuser):
-
 
 bot.run(cfg['Bottoken'])
