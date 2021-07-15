@@ -1,0 +1,22 @@
+Version: '0.1.0'
+
+ConfigVer: 1.0.0
+
+# Do you want the bot to run the configuration setup to create folders and database entries?
+RunSetup: True
+
+# Bottoken. You should know how this works
+Bottoken: ""
+
+# Id of the Bot owner. Do not leave empty or code might break :)
+Botownerid: 300009018737295372
+
+
+# Database configuration. 
+# Only option is MySQL! Make sure the configuration is correct because i have now idea what happens when it isnt
+Database:
+  Prefix: ""
+  Host: '127.0.0.1'
+  Username: ''
+  Password: ''
+  DatabaseName: ''
