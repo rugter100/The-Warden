@@ -1,0 +1,26 @@
+Config_Version: 1.0
+
+Run_Setup: True
+
+Bot_Token: ''
+
+BotownerID:
+
+Database:
+
+  #Database type. Options: [MySQL,MariaDB
+  Type: MySQL
+
+  #Prefix to be applied for every table in the datbase
+  Prefix: ''
+
+  #Database login information for MySQL
+  Host: '161.97.80.56'
+  Username: ''
+  Password: ''
+  Database: ''
+
+Prefixes:
+  Info_Prefix: '[INFO]'
+  Warning_Prefix: '[WARN]'
+  Error_Prefix: '[ERROR]'
