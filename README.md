@@ -7,4 +7,5 @@ Required Python packages:
 - discord
 - mysql.connector
 - pyyaml
-- mcuuid
+- urllib.request
+- zipfile
