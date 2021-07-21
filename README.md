@@ -8,3 +8,10 @@ Required Python packages:
 - mysql.connector
 - pyyaml
 - mcuuid
+
+# Version 0.1
+
+this was my venture to make the fundamentals of the bot. The code is not great but it works. I am currently developing V1.0 which will be a total rewrite
+Why am i doing a rewrite within a week of writing the code?
+
+I am a fast learner and i learned a lot of how to greatly improve my code. Instead of bodging update after update into the same bits of code i decided to rewrite everything because that woud be less work.
